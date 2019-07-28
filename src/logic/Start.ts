@@ -9,9 +9,9 @@ import * as chart from "chart.js";
 import * as THREE from "three";
 
 import horizSortEvenOdd from "!!raw-loader!./01_horizSortEvenOdd.frag";
-// import horizSortOddEven from "!!raw-loader!./02_horizSortOddEven.frag";
-// import vertSortEvenOdd from "!!raw-loader!./03_vertSortEvenOdd.frag";
-// import vertSortOddEven from "!!raw-loader!./04_vertSortOddEven.frag";
+import horizSortOddEven from "!!raw-loader!./02_horizSortOddEven.frag";
+import vertSortEvenOdd from "!!raw-loader!./03_vertSortEvenOdd.frag";
+import vertSortOddEven from "!!raw-loader!./04_vertSortOddEven.frag";
 
 export function execute() {
 	console.log("starting execution");
@@ -19,9 +19,9 @@ export function execute() {
 	const renderer = new THREE.WebGLRenderer();
 
 	const firstShader = GPGPU.createShaderMaterial(horizSortEvenOdd);
-	// const secondShader = GPGPU.createShaderMaterial(horizSortOddEven);
-	// const thirdShader = GPGPU.createShaderMaterial(vertSortEvenOdd);
-	// const fourthShader = GPGPU.createShaderMaterial(vertSortOddEven);
+	const secondShader = GPGPU.createShaderMaterial(horizSortOddEven);
+	const thirdShader = GPGPU.createShaderMaterial(vertSortEvenOdd);
+	const fourthShader = GPGPU.createShaderMaterial(vertSortOddEven);
 
 	const gpuSortedObjectsTargets = [GPGPU.createRenderTarget(4096), GPGPU.createRenderTarget(4096)];
 
@@ -74,14 +74,14 @@ export function execute() {
 		firstShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[j++ % 2].texture };
 		GPGPU.execute(renderer, firstShader, gpuSortedObjectsTargets[j++ % 2]);
 
-		// secondShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[j++ % 2].texture };
-		// GPGPU.execute(renderer, secondShader, gpuSortedObjectsTargets[j++ % 2]);
+		secondShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[j++ % 2].texture };
+		GPGPU.execute(renderer, secondShader, gpuSortedObjectsTargets[j++ % 2]);
 
-		// thirdShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[j++ % 2].texture };
-		// GPGPU.execute(renderer, thirdShader, gpuSortedObjectsTargets[j++ % 2]);
+		thirdShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[j++ % 2].texture };
+		GPGPU.execute(renderer, thirdShader, gpuSortedObjectsTargets[j++ % 2]);
 
-		// fourthShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[j++ % 2].texture };
-		// GPGPU.execute(renderer, fourthShader, gpuSortedObjectsTargets[j++ % 2]);
+		fourthShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[j++ % 2].texture };
+		GPGPU.execute(renderer, fourthShader, gpuSortedObjectsTargets[j++ % 2]);
 	};
 
 	createTextureCPU();
