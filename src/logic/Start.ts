@@ -1,3 +1,6 @@
+/* eslint import/no-webpack-loader-syntax: off */
+/* eslint @typescript-eslint/no-unused-vars: off */
+
 import { unpackInt16, packInt16, MIN_INT16, MAX_INT16 } from "./VectorInt16";
 import { unpackBooleans, packBooleans } from "./VectorBoolArray";
 import * as GPGPU from "./GPGPU";
@@ -5,7 +8,6 @@ import { uniformInt32Range } from "./NotRandom";
 import * as chart from "chart.js";
 import * as THREE from "three";
 
-/* eslint import/no-webpack-loader-syntax: off */
 import horizSortEvenOdd from "!!raw-loader!./01_horizSortEvenOdd.frag";
 // import horizSortOddEven from "!!raw-loader!./02_horizSortOddEven.frag";
 // import vertSortEvenOdd from "!!raw-loader!./03_vertSortEvenOdd.frag";
@@ -21,9 +23,7 @@ export function execute() {
 	// const thirdShader = GPGPU.createShaderMaterial(vertSortEvenOdd);
 	// const fourthShader = GPGPU.createShaderMaterial(vertSortOddEven);
 
-	const gpuSortedObjectsTargets = new Array() as THREE.WebGLRenderTarget[];
-	gpuSortedObjectsTargets[0] = GPGPU.createRenderTarget(4096);
-	gpuSortedObjectsTargets[1] = GPGPU.createRenderTarget(4096);
+	const gpuSortedObjectsTargets = [GPGPU.createRenderTarget(4096), GPGPU.createRenderTarget(4096)];
 
 	// u_gpuSortedObjects (texture2D)
 	// [00] booleans (8bit bool array)
