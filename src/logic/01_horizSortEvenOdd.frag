@@ -31,14 +31,14 @@ void main() {
 	vec4 targetTopLeftTexel = texture2D(u_gpuSortedObjects, 
 		vec2(((targetTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
 			 ((targetTopLeftVertInt + 0.0) * fullTexelWidth) + halfTexelWidth));
-	vec4 targetTopRightTexel = texture2D(u_gpuSortedObjects, 
-		vec2(((targetTopLeftHorizInt + 1.0) * fullTexelWidth) + halfTexelWidth,
-			 ((targetTopLeftVertInt + 0.0) * fullTexelWidth) + halfTexelWidth));
+	vec4 targetBottomLeftTexel = texture2D(u_gpuSortedObjects, 
+		vec2(((targetTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
+			 ((targetTopLeftVertInt + 1.0) * fullTexelWidth) + halfTexelWidth));
 
 	// unpack local pixel data
 	bool targetBoolArray[8];
 	unpackBooleans(targetTopLeftTexel.r, targetBoolArray);
-	float targetX = vec2ToInt16(targetTopRightTexel.rg);
+	float targetX = vec2ToInt16(targetBottomLeftTexel.rg);
 
 	// override target position if bool is not set
 	targetX *= floatEquals(float(targetBoolArray[0]), 1.0);
@@ -58,14 +58,14 @@ void main() {
 	vec4 adjacentTopLeftTexel = texture2D(u_gpuSortedObjects, 
 		vec2(((adjacentTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
 			 ((adjacentTopLeftVertInt + 0.0) * fullTexelWidth) + halfTexelWidth));
-	vec4 adjacentTopRightTexel = texture2D(u_gpuSortedObjects, 
-		vec2(((adjacentTopLeftHorizInt + 1.0) * fullTexelWidth) + halfTexelWidth,
-			 ((adjacentTopLeftVertInt + 0.0) * fullTexelWidth) + halfTexelWidth));
+	vec4 adjacentBottomLeftTexel = texture2D(u_gpuSortedObjects, 
+		vec2(((adjacentTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
+			 ((adjacentTopLeftVertInt + 1.0) * fullTexelWidth) + halfTexelWidth));
 
 	// unpack neighbor pixel data
 	bool adjacentBoolArray[8];
 	unpackBooleans(adjacentTopLeftTexel.r, adjacentBoolArray);
-	float adjacentX = vec2ToInt16(adjacentTopRightTexel.rg);
+	float adjacentX = vec2ToInt16(adjacentBottomLeftTexel.rg);
 
 	// override adjacent position if bool is not set
 	adjacentX *= floatEquals(float(adjacentBoolArray[0]), 1.0);
