@@ -54,20 +54,26 @@ export function initialize() {
 }
 
 let z = 0;
+const switchIndex = () => {
+	let oldZ = z;
+	z = (z + 1) % 2;
+	return oldZ;
+};
+
 export function renderFrame() {
-	firstShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[z++ % 2].texture };
-	GPGPU.execute(renderer, firstShader, gpuSortedObjectsTargets[z++ % 2]);
-	secondShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[z++ % 2].texture };
-	GPGPU.execute(renderer, secondShader, gpuSortedObjectsTargets[z++ % 2]);
-	thirdShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[z++ % 2].texture };
-	GPGPU.execute(renderer, thirdShader, gpuSortedObjectsTargets[z++ % 2]);
-	fourthShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[z++ % 2].texture };
-	GPGPU.execute(renderer, fourthShader, gpuSortedObjectsTargets[z++ % 2]);
+	firstShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
+	GPGPU.execute(renderer, firstShader, gpuSortedObjectsTargets[switchIndex()]);
+	secondShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
+	GPGPU.execute(renderer, secondShader, gpuSortedObjectsTargets[switchIndex()]);
+	thirdShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
+	GPGPU.execute(renderer, thirdShader, gpuSortedObjectsTargets[switchIndex()]);
+	fourthShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
+	GPGPU.execute(renderer, fourthShader, gpuSortedObjectsTargets[switchIndex()]);
 }
 
 export function getBitmapImage() {
 	const gpuBytes = new Uint8Array(textureWidth * textureWidth * 4);
-	renderer.readRenderTargetPixels(gpuSortedObjectsTargets[z % 2], 0, 0, textureWidth, textureWidth, gpuBytes);
+	renderer.readRenderTargetPixels(gpuSortedObjectsTargets[z], 0, 0, textureWidth, textureWidth, gpuBytes);
 	const bmpBytes = new Uint8Array(textureWidth * textureWidth);
 	var i = 0;
 	var j = 0;
