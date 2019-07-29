@@ -12,7 +12,7 @@ import horizSortOddEven from "!!raw-loader!./02_horizSortOddEven.frag";
 import vertSortEvenOdd from "!!raw-loader!./03_vertSortEvenOdd.frag";
 import vertSortOddEven from "!!raw-loader!./04_vertSortOddEven.frag";
 
-export const textureWidth = 1024;
+export const textureWidth = 2048;
 
 const renderer = new THREE.WebGLRenderer();
 const firstShader = GPGPU.createShaderMaterial(horizSortEvenOdd);
