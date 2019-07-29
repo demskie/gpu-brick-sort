@@ -38,11 +38,11 @@ void main() {
 	// unpack local pixel data
 	bool targetBoolArray[8];
 	unpackBooleans(targetTopLeftTexel.r, targetBoolArray);
-	float targetX = vec2ToInt16(targetBottomLeftTexel.ba);
+	float targetY = vec2ToInt16(targetBottomLeftTexel.ba);
 
 	// override target position if bool is not set
-	targetX *= floatEquals(float(targetBoolArray[0]), 1.0);
-	targetX += floatEquals(float(targetBoolArray[0]), 1.0) * (65536.0 / GPU_SORTED_OBJECTS_STRIDE)
+	targetY *= floatEquals(float(targetBoolArray[0]), 1.0);
+	targetY += floatEquals(float(targetBoolArray[0]), 1.0) * (65536.0 / GPU_SORTED_OBJECTS_STRIDE)
 		* (targetTopLeftVertInt - (GPU_SORTED_OBJECTS_WIDTH / 2.0) + (GPU_SORTED_OBJECTS_STRIDE / 2.0));
 
 	// determine if target is in front of adjacent texel
@@ -55,7 +55,7 @@ void main() {
 	adjacentTopLeftVertInt -= floatNotEquals(targetComesFirstFloat, 1.0) * GPU_SORTED_OBJECTS_STRIDE;
 
 	// adjust coordinates if we're attempting to access an adjacent texel that is out of bounds
-	sourceTexelCoord.y += floatLessThan(sourceTexelCoord.y, 0.0) * fullTexelWidth * GPU_SORTED_OBJECTS_STRIDE;
+	adjacentTopLeftVertInt += floatLessThan(adjacentTopLeftVertInt, 0.0) * fullTexelWidth * GPU_SORTED_OBJECTS_STRIDE;
 
 	// get neighbor pixels
 	vec4 adjacentTopLeftTexel = texture2D(u_gpuSortedObjects, 
