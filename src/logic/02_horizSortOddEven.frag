@@ -55,7 +55,7 @@ void main() {
 	float adjacentTopLeftVertInt = targetTopLeftVertInt;
 
 	// adjust coordinates if we're attempting to access an adjacent texel that is out of bounds
-	sourceTexelCoord.x += floatLessThan(sourceTexelCoord.x, 0.0) * fullTexelWidth * GPU_SORTED_OBJECTS_STRIDE;
+	adjacentTopLeftHorizInt += floatLessThan(adjacentTopLeftHorizInt, 0.0) * fullTexelWidth * GPU_SORTED_OBJECTS_STRIDE;
 
 	// get neighbor pixels
 	vec4 adjacentTopLeftTexel = texture2D(u_gpuSortedObjects, 
