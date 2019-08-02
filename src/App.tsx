@@ -9,22 +9,28 @@ class App extends React.Component<{}, {}> {
 	componentDidMount() {
 		const canvas = document.getElementById("mainCanvas") as HTMLCanvasElement;
 		const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
-		let frame = 0;
-		const executeRenderFrame = () => {
-			main.renderFrame();
-			if (frame === 0) {
-				let imageData = ctx.createImageData(canvas.width, canvas.height);
-				imageData.data.set(main.getBitmapImage());
-				ctx.putImageData(imageData, 0, 0);
-			}
-			frame = (frame + 1) % 60;
-			requestAnimationFrame(() => executeRenderFrame());
-		};
-		executeRenderFrame();
+		let imageData = ctx.createImageData(canvas.width, canvas.height);
+		imageData.data.set(main.getBitmapImage());
+		ctx.putImageData(imageData, 0, 0);
+		setTimeout(() => {
+			let frame = 0;
+			const executeRenderFrame = () => {
+				main.renderFrame();
+				if (frame > main.textureWidth) return;
+				if (frame % 1 === 0) {
+					let imageData = ctx.createImageData(canvas.width, canvas.height);
+					imageData.data.set(main.getBitmapImage());
+					ctx.putImageData(imageData, 0, 0);
+				}
+				frame++;
+				requestAnimationFrame(() => executeRenderFrame());
+			};
+			executeRenderFrame();
+		});
 	}
 
 	render() {
-		return <canvas id="mainCanvas" width={main.textureWidth / 2} height={main.textureWidth / 2} />;
+		return <canvas id="mainCanvas" width={main.textureWidth} height={main.textureWidth} />;
 	}
 }
 
