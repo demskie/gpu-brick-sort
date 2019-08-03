@@ -20,7 +20,7 @@ float packBooleans(bool arr[8]) { float f = float(int(arr[7])) * 128.0; f += flo
 vec2 addToVec2(vec2 v, float f, float w) { v.y += floor((v.x + f) / w); v.x = mod(v.x + f, w); return v; }
 
 void main() {
-	// determine if we're outputting to one of the left side texels
+	// determine if we're outputting to one of the top side texels
 	float outputToEvenBool = floatEquals(mod(floor(gl_FragCoord.y), 2.0), 0.0); 
 
 	// calculate coordinates
