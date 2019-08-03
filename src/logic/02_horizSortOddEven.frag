@@ -4,14 +4,13 @@ precision highp sampler2D;
 
 uniform sampler2D u_gpuSortedObjects;
 
-const float GPU_SORTED_OBJECTS_WIDTH = 2048.0;
-const float GPU_SORTED_OBJECTS_STRIDE = 2.0;
+const float GPU_SORTED_OBJECTS_WIDTH = 1024.0;
 
 float round(float f) { return floor(f + 0.5); }
 float floatEquals(float f1, float f2) { return 1.0 - abs(sign(f1 - f2)); }
 float floatNotEquals(float f1, float f2) { return abs(sign(f1 - f2)); }
-float floatLessThan(float f1, float f2) { return max(sign(f1 - f2), 0.0); }
-float floatGreaterThan(float f1, float f2) { return max(sign(f2 - f1), 0.0); }
+float floatLessThan(float f1, float f2) { return max(sign(f2 - f1), 0.0); }
+float floatGreaterThan(float f1, float f2) { return max(sign(f1 - f2), 0.0); }
 float floatLessThanOrEqual(float f1, float f2) { return 1.0 - floatGreaterThan(f1, f2); }
 float floatGreaterThanOrEqual(float f1, float f2) { return 1.0 - floatLessThan(f1, f2); }
 float vec2ToInt16(vec2 v) { return clamp(floor(floor(v.r * 255.0) * 256.0) + floor(v.g * 255.0) - 32767.0, -32767.0, 32768.0); }
@@ -21,69 +20,34 @@ float packBooleans(bool arr[8]) { float f = float(int(arr[7])) * 128.0; f += flo
 vec2 addToVec2(vec2 v, float f, float w) { v.y += floor((v.x + f) / w); v.x = mod(v.x + f, w); return v; }
 
 void main() {
-	// calculate coordinate reference values
-	float targetTopLeftHorizInt = floor(floor(gl_FragCoord.x) - mod(floor(gl_FragCoord.x), GPU_SORTED_OBJECTS_STRIDE));
-	float targetTopLeftVertInt = floor(floor(gl_FragCoord.y) - mod(floor(gl_FragCoord.y), GPU_SORTED_OBJECTS_STRIDE));
-	float halfTexelWidth = 0.5 / GPU_SORTED_OBJECTS_WIDTH;
-	float fullTexelWidth = 1.0 / GPU_SORTED_OBJECTS_WIDTH;
+	// determine if we're outputting to one of the left side texels
+	float outputToOddBool = floatEquals(mod(floor(gl_FragCoord.x), 2.0), 1.0);
 
-	// get local pixels
-	vec4 targetTopLeftTexel = texture2D(u_gpuSortedObjects, 
-		vec2(((targetTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
-			 ((targetTopLeftVertInt + 0.0) * fullTexelWidth) + halfTexelWidth));
-	vec4 targetBottomLeftTexel = texture2D(u_gpuSortedObjects, 
-		vec2(((targetTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
-			 ((targetTopLeftVertInt + 1.0) * fullTexelWidth) + halfTexelWidth));
+	// calculate coordinates
+	vec2 oddFragCoord = vec2(gl_FragCoord.x - floatEquals(outputToOddBool, 0.0), gl_FragCoord.y);
+	vec2 evenFragCoord = vec2(oddFragCoord.x + 1.0, oddFragCoord.y);
 
-	// unpack local pixel data
-	bool targetBoolArray[8];
-	unpackBooleans(targetTopLeftTexel.r, targetBoolArray);
-	float targetX = vec2ToInt16(targetBottomLeftTexel.rg);
+	// constrain for (literal) edge case
+	oddFragCoord.x = clamp(oddFragCoord.x, 0.5, GPU_SORTED_OBJECTS_WIDTH - 0.5);
+	evenFragCoord.x = clamp(evenFragCoord.x, 0.5, GPU_SORTED_OBJECTS_WIDTH - 0.5);
 
-	// override target position if bool is not set
-	targetX *= floatEquals(float(targetBoolArray[0]), 1.0);
-	targetX += floatEquals(float(targetBoolArray[0]), 1.0) * (65536.0 / GPU_SORTED_OBJECTS_STRIDE)
-		* (targetTopLeftHorizInt - (GPU_SORTED_OBJECTS_WIDTH / 2.0) + (GPU_SORTED_OBJECTS_STRIDE / 2.0));
+	// get texels
+	vec4 oddTexel = texture2D(u_gpuSortedObjects, oddFragCoord / GPU_SORTED_OBJECTS_WIDTH);
+	vec4 evenTexel = texture2D(u_gpuSortedObjects, evenFragCoord / GPU_SORTED_OBJECTS_WIDTH);
+	
+	// unpack pixel position data
+	float oddX = vec2ToInt16(oddTexel.rg);
+	float evenX = vec2ToInt16(evenTexel.rg);
+	
+	// start creating coordinates for source texel
+	vec2 sourceFragCoord = vec2(gl_FragCoord.xy);
 
-	// determine if target is in front of adjacent texel
-	float targetComesFirstFloat = floatNotEquals(mod(targetTopLeftHorizInt, 2.0 * GPU_SORTED_OBJECTS_STRIDE), 0.0);
+	// add to coordinates if (even_position_comes_before && we_are_odd)
+	sourceFragCoord.x += floatLessThan(evenX, oddX) * outputToOddBool;
 
-	// determine adjacent coordinates
-	float adjacentTopLeftHorizInt = targetTopLeftHorizInt;
-	adjacentTopLeftHorizInt += targetComesFirstFloat * GPU_SORTED_OBJECTS_STRIDE;
-	adjacentTopLeftHorizInt -= floatNotEquals(targetComesFirstFloat, 1.0) * GPU_SORTED_OBJECTS_STRIDE;
-	float adjacentTopLeftVertInt = targetTopLeftVertInt;
-
-	// adjust coordinates if we're attempting to access an adjacent texel that is out of bounds
-	adjacentTopLeftHorizInt += floatLessThan(adjacentTopLeftHorizInt, 0.0) * fullTexelWidth * GPU_SORTED_OBJECTS_STRIDE;
-
-	// get neighbor pixels
-	vec4 adjacentTopLeftTexel = texture2D(u_gpuSortedObjects, 
-		vec2(((adjacentTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
-			 ((adjacentTopLeftVertInt + 0.0) * fullTexelWidth) + halfTexelWidth));
-	vec4 adjacentBottomLeftTexel = texture2D(u_gpuSortedObjects, 
-		vec2(((adjacentTopLeftHorizInt + 0.0) * fullTexelWidth) + halfTexelWidth,
-			 ((adjacentTopLeftVertInt + 1.0) * fullTexelWidth) + halfTexelWidth));
-
-	// unpack neighbor pixel data
-	bool adjacentBoolArray[8];
-	unpackBooleans(adjacentTopLeftTexel.r, adjacentBoolArray);
-	float adjacentX = vec2ToInt16(adjacentBottomLeftTexel.rg);
-
-	// override adjacent position if bool is not set
-	adjacentX *= floatEquals(float(adjacentBoolArray[0]), 1.0);
-	adjacentX += floatEquals(float(adjacentBoolArray[0]), 1.0) * (65536.0 / GPU_SORTED_OBJECTS_STRIDE)
-		* (adjacentTopLeftHorizInt - (GPU_SORTED_OBJECTS_WIDTH / 2.0) + (GPU_SORTED_OBJECTS_STRIDE / 2.0));
-
-	// determine first and second coordinate
-	float firstX = targetX * floatEquals(targetComesFirstFloat, 1.0) + adjacentX * floatNotEquals(targetComesFirstFloat, 1.0);
-	float secondX = adjacentX * floatEquals(targetComesFirstFloat, 1.0) + targetX * floatNotEquals(targetComesFirstFloat, 1.0);
-
-	// calculate source texel coordinates
-	vec2 sourceTexelCoord = vec2(gl_FragCoord.x, gl_FragCoord.y);
-	sourceTexelCoord.x += floatGreaterThan(firstX, secondX) * targetComesFirstFloat * fullTexelWidth * GPU_SORTED_OBJECTS_STRIDE;
-	sourceTexelCoord.x -= floatGreaterThan(firstX, secondX) * floatNotEquals(targetComesFirstFloat, 1.0) * fullTexelWidth * GPU_SORTED_OBJECTS_STRIDE;
-
+	// subtract to coordinates if (even_position_comes_before && we_are_even)
+	sourceFragCoord.x -= floatLessThan(evenX, oddX) * floatEquals(outputToOddBool, 0.0);
+	
 	// return the source texel
-	gl_FragColor = texture2D(u_gpuSortedObjects, sourceTexelCoord);
+	gl_FragColor = texture2D(u_gpuSortedObjects, sourceFragCoord / GPU_SORTED_OBJECTS_WIDTH);
 }
