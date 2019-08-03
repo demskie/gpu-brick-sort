@@ -61,7 +61,6 @@ export function getBitmapImage() {
 	for (var i = 0; i < gpuBytes.length; i += 4) {
 		const x = unpackInt16(gpuBytes[i + 0], gpuBytes[i + 1]);
 		const y = unpackInt16(gpuBytes[i + 2], gpuBytes[i + 3]);
-		// bmpBytes[i] = gpuBytes[i];
 		bmpBytes[i + 0] = 256 * ((x + 32767) / 65536);
 		bmpBytes[i + 1] = 256 * ((y + 32767) / 65536);
 		bmpBytes[i + 2] = 256 * ((y + 32767) / 65536);
