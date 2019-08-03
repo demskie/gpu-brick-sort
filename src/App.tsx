@@ -16,7 +16,7 @@ class App extends React.Component<{}, {}> {
 			let frame = 0;
 			const executeRenderFrame = () => {
 				main.renderFrame();
-				if (frame > main.textureWidth) return;
+				if (frame > main.textureWidth) return console.log("finished");
 				if (frame % 1 === 0) {
 					let imageData = ctx.createImageData(canvas.width, canvas.height);
 					imageData.data.set(main.getBitmapImage());
