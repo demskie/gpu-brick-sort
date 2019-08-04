@@ -1,11 +1,8 @@
 /* eslint import/no-webpack-loader-syntax: off */
-/* eslint @typescript-eslint/no-unused-vars: off */
 
 import { unpackInt16, packInt16, MIN_INT16, MAX_INT16 } from "./VectorInt16";
-import { unpackBooleans, packBooleans } from "./VectorBoolArray";
 import * as GPGPU from "./GPGPU";
 import { uniformInt32Range } from "./NotRandom";
-import * as THREE from "three";
 
 import horizSortEvenOdd from "!!raw-loader!./01_horizSortEvenOdd.frag";
 import horizSortOddEven from "!!raw-loader!./02_horizSortOddEven.frag";
@@ -14,7 +11,6 @@ import vertSortOddEven from "!!raw-loader!./04_vertSortOddEven.frag";
 
 export const textureWidth = 1024;
 
-const renderer = new THREE.WebGLRenderer();
 const firstShader = GPGPU.createShaderMaterial(horizSortEvenOdd);
 const secondShader = GPGPU.createShaderMaterial(horizSortOddEven);
 const thirdShader = GPGPU.createShaderMaterial(vertSortEvenOdd);
@@ -33,7 +29,7 @@ export function initialize() {
 		inputTex.image.data[i + 3] = yArr[1];
 	}
 	console.log(inputTex.image.data);
-	GPGPU.renderTexture(renderer, inputTex, textureWidth, gpuSortedObjectsTargets[0]);
+	GPGPU.renderTexture(inputTex, textureWidth, gpuSortedObjectsTargets[0]);
 }
 
 let z = 0;
@@ -45,18 +41,17 @@ const switchIndex = () => {
 
 export function renderFrame() {
 	firstShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(renderer, firstShader, gpuSortedObjectsTargets[z]);
+	GPGPU.execute(firstShader, gpuSortedObjectsTargets[z]);
 	secondShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(renderer, secondShader, gpuSortedObjectsTargets[z]);
+	GPGPU.execute(secondShader, gpuSortedObjectsTargets[z]);
 	thirdShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(renderer, thirdShader, gpuSortedObjectsTargets[z]);
+	GPGPU.execute(thirdShader, gpuSortedObjectsTargets[z]);
 	fourthShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(renderer, fourthShader, gpuSortedObjectsTargets[z]);
+	GPGPU.execute(fourthShader, gpuSortedObjectsTargets[z]);
 }
 
 export function getBitmapImage() {
-	const gpuBytes = new Uint8Array(textureWidth * textureWidth * 4);
-	renderer.readRenderTargetPixels(gpuSortedObjectsTargets[z], 0, 0, textureWidth, textureWidth, gpuBytes);
+	const gpuBytes = GPGPU.readTargetPixels(gpuSortedObjectsTargets[z], textureWidth);
 	const bmpBytes = new Uint8Array(textureWidth * textureWidth * 4);
 	for (var i = 0; i < gpuBytes.length; i += 4) {
 		const x = unpackInt16(gpuBytes[i + 0], gpuBytes[i + 1]);

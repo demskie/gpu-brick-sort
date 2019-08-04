@@ -1,4 +1,34 @@
-import * as THREE from "three";
+import {
+	Camera,
+	Scene,
+	Mesh,
+	PlaneBufferGeometry,
+	RawShaderMaterial,
+	DataTexture,
+	RGBAFormat,
+	UnsignedByteType,
+	WebGLRenderTarget,
+	WebGLRenderer,
+	ClampToEdgeWrapping,
+	NearestFilter
+} from "three";
+
+var glctx: WebGLRenderingContext | undefined;
+
+const isNode = require("detect-node");
+export function getWebGLContext() {
+	if (glctx) return glctx;
+	if (!isNode) {
+		const canvas = document.createElement("canvas");
+		if (canvas) {
+			const ctx = canvas.getContext("webgl");
+			if (ctx) return (glctx = ctx);
+		}
+	}
+	glctx = require("gl")(4096, 4096) as WebGLRenderingContext;
+	if (!glctx) throw new Error("gl context could not be created");
+	return glctx;
+}
 
 const passThruVert = `
 precision highp float;
@@ -20,59 +50,54 @@ void main() {
 	gl_FragColor = texture2D(u_inputTexture, uv);
 }`;
 
-const CAMERA = new THREE.Camera();
-CAMERA.position.z = 1;
+const RENDERER = new WebGLRenderer({ context: getWebGLContext() });
+const CAMERA = new Camera();
 const PASS_THRU_SHADER = createShaderMaterial(passThruFrag);
-PASS_THRU_SHADER.uniforms.texture = { value: null };
-const SCENE = new THREE.Scene();
-const MESH = new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), PASS_THRU_SHADER);
+const SCENE = new Scene();
+const MESH = new Mesh(new PlaneBufferGeometry(2, 2), PASS_THRU_SHADER);
 SCENE.add(MESH);
 
-export function testCapabilities(rdr: THREE.WebGLRenderer) {
-	return null;
-}
-
 export function createShaderMaterial(fragShader: string) {
-	return new THREE.RawShaderMaterial({
+	return new RawShaderMaterial({
 		vertexShader: passThruVert,
 		fragmentShader: fragShader
 	});
 }
 
 export function createTexture(width: number) {
-	const tex = new THREE.DataTexture(
-		new Uint8Array(width * width * 4),
-		width,
-		width,
-		THREE.RGBAFormat,
-		THREE.UnsignedByteType
-	);
+	const tex = new DataTexture(new Uint8Array(width * width * 4), width, width, RGBAFormat, UnsignedByteType);
 	tex.needsUpdate = true;
 	return tex;
 }
 
-export function execute(rdr: THREE.WebGLRenderer, mat: THREE.ShaderMaterial, out: THREE.RenderTarget) {
+export function execute(mat: THREE.RawShaderMaterial, out: WebGLRenderTarget) {
 	MESH.material = mat;
-	rdr.setRenderTarget(out);
-	rdr.render(SCENE, CAMERA);
+	RENDERER.setRenderTarget(out);
+	RENDERER.render(SCENE, CAMERA);
 	MESH.material = PASS_THRU_SHADER;
 }
 
-export function renderTexture(rdr: THREE.WebGLRenderer, input: THREE.Texture, width: number, out: THREE.RenderTarget) {
+export function renderTexture(input: DataTexture, width: number, out: WebGLRenderTarget) {
 	PASS_THRU_SHADER.uniforms.u_inputTexture = { value: input };
 	PASS_THRU_SHADER.uniforms.u_outputWidth = { value: width };
-	execute(rdr, PASS_THRU_SHADER, out);
+	execute(PASS_THRU_SHADER, out);
 }
 
 export function createRenderTarget(width: number) {
-	return new THREE.WebGLRenderTarget(width, width, {
-		wrapS: THREE.ClampToEdgeWrapping,
-		wrapT: THREE.ClampToEdgeWrapping,
-		minFilter: THREE.NearestFilter,
-		magFilter: THREE.NearestFilter,
-		format: THREE.RGBAFormat,
-		type: THREE.UnsignedByteType,
+	return new WebGLRenderTarget(width, width, {
+		wrapS: ClampToEdgeWrapping,
+		wrapT: ClampToEdgeWrapping,
+		minFilter: NearestFilter,
+		magFilter: NearestFilter,
+		format: RGBAFormat,
+		type: UnsignedByteType,
 		depthBuffer: false,
 		stencilBuffer: false
 	});
+}
+
+export function readTargetPixels(target: WebGLRenderTarget, width: number, buffer?: Uint8Array) {
+	if (!buffer) buffer = new Uint8Array(width * width * 4);
+	RENDERER.readRenderTargetPixels(target, 0, 0, width, width, buffer);
+	return buffer;
 }
