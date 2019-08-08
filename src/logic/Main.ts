@@ -40,10 +40,10 @@ let z = 0;
 const nextIndex = () => (z = (z + 1) % 2);
 
 export function renderFrame() {
-	GPGPU.execute(firstShader, targets[1], { u_gpuSortedObjects: { value: targets[0] } });
-	GPGPU.execute(secondShader, targets[0], { u_gpuSortedObjects: { value: targets[1] } });
-	GPGPU.execute(thirdShader, targets[1], { u_gpuSortedObjects: { value: targets[0] } });
-	GPGPU.execute(fourthShader, targets[0], { u_gpuSortedObjects: { value: targets[1] } });
+	GPGPU.execute(firstShader, targets[1], { u_gpuSortedObjects: targets[0].texture });
+	GPGPU.execute(secondShader, targets[0], { u_gpuSortedObjects: targets[1].texture });
+	GPGPU.execute(thirdShader, targets[1], { u_gpuSortedObjects: targets[0].texture });
+	GPGPU.execute(fourthShader, targets[0], { u_gpuSortedObjects: targets[1].texture });
 }
 
 export function getBitmapImage() {

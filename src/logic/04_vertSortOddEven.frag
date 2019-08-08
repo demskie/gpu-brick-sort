@@ -49,6 +49,5 @@ void main() {
 	sourceFragCoord.y -= floatLessThan(evenY, oddY) * floatEquals(outputToOddBool, 0.0);
 	
 	// return the source texel
-	// gl_FragColor = texture2D(u_gpuSortedObjects, sourceFragCoord / GPU_SORTED_OBJECTS_WIDTH);
-	gl_FragColor = vec4(0.5, 0.0, 0.5, 1.0);
+	gl_FragColor = texture2D(u_gpuSortedObjects, sourceFragCoord / GPU_SORTED_OBJECTS_WIDTH);
 }
