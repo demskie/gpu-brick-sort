@@ -13,26 +13,16 @@ import vertSortOddEven from "!!raw-loader!./04_vertSortOddEven.frag";
 
 export const textureWidth = 1024;
 
-const firstShader = GPGPU.createProgramInfo(horizSortEvenOdd);
-const secondShader = GPGPU.createProgramInfo(horizSortOddEven);
-const thirdShader = GPGPU.createProgramInfo(vertSortEvenOdd);
-const fourthShader = GPGPU.createProgramInfo(vertSortOddEven);
-const gpuSortedObjectsTargets = [
-	GPGPU.createRenderTarget(textureWidth),
-	GPGPU.createRenderTarget(textureWidth)
-] as WebGLFramebuffer[];
-
-// const renderer = new THREE.WebGLRenderer();
-// const firstShader = GPGPU.createShaderMaterial(horizSortEvenOdd);
-// const secondShader = GPGPU.createShaderMaterial(horizSortOddEven);
-// const thirdShader = GPGPU.createShaderMaterial(vertSortEvenOdd);
-// const fourthShader = GPGPU.createShaderMaterial(vertSortOddEven);
-// const gpuSortedObjectsTargets = [GPGPU.createRenderTarget(textureWidth), GPGPU.createRenderTarget(textureWidth)];
+const firstShader = GPGPU.createProgram(horizSortEvenOdd);
+const secondShader = GPGPU.createProgram(horizSortOddEven);
+const thirdShader = GPGPU.createProgram(vertSortEvenOdd);
+const fourthShader = GPGPU.createProgram(vertSortOddEven);
+const targets = [new GPGPU.FBO(textureWidth), new GPGPU.FBO(textureWidth)];
 
 export function initialize() {
 	console.log("initializing");
-	const inputTex = GPGPU.createTexture(textureWidth);
-	if (!inputTex) return;
+	const inputFBO = targets[0];
+	if (!inputFBO) return;
 	const arr = new Uint8Array(textureWidth * textureWidth * 4);
 	for (var i = 0; i < arr.length; i += 4) {
 		const xArr = packInt16(uniformInt32Range(i, MIN_INT16, MAX_INT16));
@@ -43,24 +33,21 @@ export function initialize() {
 		arr[i + 3] = yArr[1];
 	}
 	console.log(arr);
-	GPGPU.renderTexture(inputTex, textureWidth, gpuSortedObjectsTargets[0]);
+	inputFBO.modifyTexture(arr);
 }
 
 let z = 0;
-const switchIndex = () => {
-	let oldZ = z;
-	z = (z + 1) % 2;
-	return oldZ;
-};
+const nextIndex = () => (z = (z + 1) % 2);
 
 export function renderFrame() {
-	GPGPU.execute(firstShader, textureWidth, gpuSortedObjectsTargets[z], {
-		u_gpuSortedObjects: { value: gpuSortedObjectsTargets[switchIndex()] }
-	});
+	GPGPU.execute(firstShader, targets[1], { u_gpuSortedObjects: { value: targets[0] } });
+	GPGPU.execute(secondShader, targets[0], { u_gpuSortedObjects: { value: targets[1] } });
+	GPGPU.execute(thirdShader, targets[1], { u_gpuSortedObjects: { value: targets[0] } });
+	GPGPU.execute(fourthShader, targets[0], { u_gpuSortedObjects: { value: targets[1] } });
 }
 
 export function getBitmapImage() {
-	const gpuBytes = GPGPU.readTargetPixels(textureWidth, gpuSortedObjectsTargets[z]);
+	const gpuBytes = targets[0].readPixels();
 	const bmpBytes = new Uint8Array(gpuBytes.length);
 	for (var i = 0; i < bmpBytes.length; i += 4) {
 		const x = unpackInt16(gpuBytes[i + 0], gpuBytes[i + 1]);

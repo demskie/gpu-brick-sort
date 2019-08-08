@@ -20,13 +20,15 @@ class App extends React.Component<{}, {}> {
 				if (frame % 1 === 0) {
 					let imageData = ctx.createImageData(canvas.width, canvas.height);
 					imageData.data.set(main.getBitmapImage());
+					if (frame % 128 === 0) console.log(imageData.data);
 					ctx.putImageData(imageData, 0, 0);
 				}
 				frame++;
 				requestAnimationFrame(() => executeRenderFrame());
 			};
+			console.log("starting");
 			executeRenderFrame();
-		});
+		}, 1000);
 	}
 
 	render() {
