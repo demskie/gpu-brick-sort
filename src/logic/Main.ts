@@ -1,7 +1,6 @@
 /* eslint import/no-webpack-loader-syntax: off */
 
-import { unpackInt16, packInt16, MIN_INT16, MAX_INT16 } from "./VectorInt16";
-import * as GPGPU from "./GPGPU";
+import * as gpu from "gpu-compute";
 import { uniformInt32Range } from "./NotRandom";
 
 import horizSortEvenOdd from "!!raw-loader!./01_horizSortEvenOdd.frag";
@@ -10,52 +9,47 @@ import vertSortEvenOdd from "!!raw-loader!./03_vertSortEvenOdd.frag";
 import vertSortOddEven from "!!raw-loader!./04_vertSortOddEven.frag";
 
 export const textureWidth = 1024;
+export const cyclesPerFrame = 16;
 
-const firstShader = GPGPU.createShaderMaterial(horizSortEvenOdd);
-const secondShader = GPGPU.createShaderMaterial(horizSortOddEven);
-const thirdShader = GPGPU.createShaderMaterial(vertSortEvenOdd);
-const fourthShader = GPGPU.createShaderMaterial(vertSortOddEven);
-const gpuSortedObjectsTargets = [GPGPU.createRenderTarget(textureWidth), GPGPU.createRenderTarget(textureWidth)];
+const renderTarget = new gpu.RenderTarget(textureWidth);
+const fragVariables = { textureWidth: `${textureWidth}.0` };
+const firstShader = new gpu.ComputeShader(horizSortEvenOdd, fragVariables);
+const secondShader = new gpu.ComputeShader(horizSortOddEven, fragVariables);
+const thirdShader = new gpu.ComputeShader(vertSortEvenOdd, fragVariables);
+const fourthShader = new gpu.ComputeShader(vertSortOddEven, fragVariables);
 
 export function initialize() {
 	console.log("initializing");
-	const inputTex = GPGPU.createTexture(textureWidth);
-	for (var i = 0; i < inputTex.image.data.length; i += 4) {
-		const xArr = packInt16(uniformInt32Range(i, MIN_INT16, MAX_INT16));
-		const yArr = packInt16(uniformInt32Range(i + 123, MIN_INT16, MAX_INT16));
-		inputTex.image.data[i + 0] = xArr[0];
-		inputTex.image.data[i + 1] = xArr[1];
-		inputTex.image.data[i + 2] = yArr[0];
-		inputTex.image.data[i + 3] = yArr[1];
+	const bytes = new Uint8Array(textureWidth * textureWidth * 4);
+	for (var i = 0; i < bytes.length; i += 4) {
+		const xArr = gpu.packInt16(uniformInt32Range(i, gpu.MIN_INT16, gpu.MAX_INT16));
+		const yArr = gpu.packInt16(uniformInt32Range(i + 123, gpu.MIN_INT16, gpu.MAX_INT16));
+		bytes[i + 0] = xArr[0];
+		bytes[i + 1] = xArr[1];
+		bytes[i + 2] = yArr[0];
+		bytes[i + 3] = yArr[1];
 	}
-	console.log(inputTex.image.data);
-	GPGPU.renderTexture(inputTex, textureWidth, gpuSortedObjectsTargets[0]);
+	console.log("pushing");
+	renderTarget.pushTextureData(bytes);
 }
 
-let z = 0;
-const switchIndex = () => {
-	let oldZ = z;
-	z = (z + 1) % 2;
-	return oldZ;
-};
-
 export function renderFrame() {
-	firstShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(firstShader, gpuSortedObjectsTargets[z]);
-	secondShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(secondShader, gpuSortedObjectsTargets[z]);
-	thirdShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(thirdShader, gpuSortedObjectsTargets[z]);
-	fourthShader.uniforms.u_gpuSortedObjects = { value: gpuSortedObjectsTargets[switchIndex()].texture };
-	GPGPU.execute(fourthShader, gpuSortedObjectsTargets[z]);
+	console.log("computing");
+	for (var i = 0; i < cyclesPerFrame; i++) {
+		renderTarget.compute(firstShader, { u_gpuSortedObjects: renderTarget });
+		renderTarget.compute(secondShader, { u_gpuSortedObjects: renderTarget });
+		renderTarget.compute(thirdShader, { u_gpuSortedObjects: renderTarget });
+		renderTarget.compute(fourthShader, { u_gpuSortedObjects: renderTarget });
+	}
 }
 
 export function getBitmapImage() {
-	const gpuBytes = GPGPU.readTargetPixels(gpuSortedObjectsTargets[z], textureWidth);
-	const bmpBytes = new Uint8Array(textureWidth * textureWidth * 4);
-	for (var i = 0; i < gpuBytes.length; i += 4) {
-		const x = unpackInt16(gpuBytes[i + 0], gpuBytes[i + 1]);
-		const y = unpackInt16(gpuBytes[i + 2], gpuBytes[i + 3]);
+	console.log("reading");
+	const gpuBytes = renderTarget.readPixels();
+	const bmpBytes = new Uint8Array(gpuBytes.length);
+	for (var i = 0; i < bmpBytes.length; i += 4) {
+		const x = gpu.unpackInt16(gpuBytes[i + 0], gpuBytes[i + 1]);
+		const y = gpu.unpackInt16(gpuBytes[i + 2], gpuBytes[i + 3]);
 		bmpBytes[i + 0] = 256 * ((x + 32767) / 65536);
 		bmpBytes[i + 1] = 256 * ((y + 32767) / 65536);
 		bmpBytes[i + 2] = 256 * ((y + 32767) / 65536);
